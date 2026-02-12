@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Photo</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="header">
@@ -13,12 +13,12 @@
     </div>
 
     <nav>
-        <a href="{{ url_for('home') }}">Retour a la galerie</a>
+        <a href="/home">Retour a la galerie</a>
     </nav>
 
-    {% if error %}
-    <p class="error">{{ error }}</p>
-    {% endif %}
+    {{if .Error}}
+    <p class="error">{{.Error}}</p>
+    {{end}}
 
     <div class="card form-container">
         <form method="POST" enctype="multipart/form-data">
