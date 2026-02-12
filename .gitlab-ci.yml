@@ -10,8 +10,10 @@ variables:
   IMAGE_NAME: "europe-docker.pkg.dev/favorable-tree-471508-t9/cours-saas/project-image"
   WORKLOAD_IDENTITY_PROVIDER: "projects/1755853372/locations/global/workloadIdentityPools/github-provider/providers/gitlab-gitlab"
   SERVICE_ACCOUNT_EMAIL: "gitlab-ci@favorable-tree-471508-t9.iam.gserviceaccount.com"
+  CLOUD_FUNCTION_NAME: "resize-image"
+  BUCKET_NAME: "script-resize"
 
-build:
+build-flask:
   stage: build
   image: google/cloud-sdk:alpine
   id_tokens:
@@ -33,7 +35,7 @@ build:
     - main
     - merge_requests
 
-deploy:
+deploy-flask:
   stage: deploy
   image: google/cloud-sdk:alpine
   id_tokens:
@@ -50,5 +52,31 @@ deploy:
   script:
     - sed "s|IMAGE_NAME|${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}|g" infra/service.yml > service.generated.yml
     - gcloud run services replace service.generated.yml --region $REGION
+  only:
+    - main
+
+deploy-resize-function:
+  stage: deploy
+  image: google/cloud-sdk:alpine
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  before_script:
+    - echo ${GITLAB_OIDC_TOKEN} > .ci_job_jwt_file
+    - gcloud iam workload-identity-pools create-cred-config ${WORKLOAD_IDENTITY_PROVIDER}
+      --service-account="${SERVICE_ACCOUNT_EMAIL}"
+      --output-file=.gcp_temp_cred.json
+      --credential-source-file=.ci_job_jwt_file
+    - gcloud auth login --cred-file=.gcp_temp_cred.json
+    - gcloud config set project $PROJECT_ID
+  script:
+    - gcloud functions deploy ${CLOUD_FUNCTION_NAME}
+      --gen2
+      --runtime=python312
+      --region=${REGION}
+      --source=./resize_script
+      --entry-point=resize_image
+      --trigger-event-filters="type=google.cloud.storage.object.v1.finalized"
+      --trigger-event-filters="bucket=${BUCKET_NAME}"
   only:
     - main
