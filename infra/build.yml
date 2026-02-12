@@ -1,0 +1,15 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "europe-docker.pkg.dev/favorable-tree-471508-t9/cours-saas/project-image:$_TAG"
+      - "."
+      - "--target"
+      - "prod"
+
+images:
+  - "europe-docker.pkg.dev/favorable-tree-471508-t9/cours-saas/project-image:$_TAG"
+
+substitutions:
+  _TAG: "latest"

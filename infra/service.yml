@@ -1,0 +1,21 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: project-image-prod-yml
+  namespace: favorable-tree-471508-t9
+  labels:
+    cloudcontainers-googleapis-com-container-name: project-image-prod
+spec:
+  template:
+    spec:
+      containers:
+        - image: IMAGE_NAME
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
+          env:
+            - name: FLASK_ENV
+              value: "production"

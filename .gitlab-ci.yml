@@ -1,0 +1,54 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  PROJECT_ID: "favorable-tree-471508-t9"
+
+  REGION: "europe-west1"
+  SERVICE_NAME: "project_saas"
+  IMAGE_NAME: "europe-docker.pkg.dev/favorable-tree-471508-t9/cours-saas/project-image"
+  WORKLOAD_IDENTITY_PROVIDER: "projects/1755853372/locations/global/workloadIdentityPools/github-provider/providers/gitlab-gitlab"
+  SERVICE_ACCOUNT_EMAIL: "gitlab-ci@favorable-tree-471508-t9.iam.gserviceaccount.com"
+
+build:
+  stage: build
+  image: google/cloud-sdk:alpine
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+
+  before_script:
+    - echo ${GITLAB_OIDC_TOKEN} > .ci_job_jwt_file
+    - gcloud iam workload-identity-pools create-cred-config ${WORKLOAD_IDENTITY_PROVIDER}
+      --service-account="${SERVICE_ACCOUNT_EMAIL}"
+      --output-file=.gcp_temp_cred.json
+      --credential-source-file=.ci_job_jwt_file
+    - gcloud auth login --cred-file=.gcp_temp_cred.json
+    - gcloud auth configure-docker europe-docker.pkg.dev --quiet
+    - gcloud config set project $PROJECT_ID
+  script:
+    - gcloud builds submit . --config=infra/build.yml --substitutions=_TAG=${CI_COMMIT_SHORT_SHA} --gcs-source-staging-dir=gs://${PROJECT_ID}_cloudbuild/source
+  only:
+    - main
+    - merge_requests
+
+deploy:
+  stage: deploy
+  image: google/cloud-sdk:alpine
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  before_script:
+    - echo ${GITLAB_OIDC_TOKEN} > .ci_job_jwt_file
+    - gcloud iam workload-identity-pools create-cred-config ${WORKLOAD_IDENTITY_PROVIDER}
+      --service-account="${SERVICE_ACCOUNT_EMAIL}"
+      --output-file=.gcp_temp_cred.json
+      --credential-source-file=.ci_job_jwt_file
+    - gcloud auth login --cred-file=.gcp_temp_cred.json
+    - gcloud config set project $PROJECT_ID
+  script:
+    - sed "s|IMAGE_NAME|${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}|g" infra/service.yml > service.generated.yml
+    - gcloud run services replace service.generated.yml --region $REGION
+  only:
+    - main

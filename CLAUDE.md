@@ -9,3 +9,14 @@
     - sur chaque image on voit le nom de la personne qui l'a upload
     - a l'upload d'une image, une fonction cloud function doit cropper l'image pour qu'elles fassent toujours la meme taille
     - quand une nouvelle image est prete a etre affichée, elle est visible dans le slider sans actualiser
+
+le plan de l'app:
+
+app principale (flask):
+/home -> affiche les tourniqué d'image (code js qui refresh pour afficher les nouvelles images) et le qr code
+
+/upload -> formulaire d'upload de la photo avec un champs texte obligatoire pour le nom
+
+=> trouver un moyen de link a la volé le nom de l'image et le nom de la personne upload (dict python ?)
+script cloud function: 
+- Code python qui prend une image en entrer et la crop pour s'assurer de la bonne taille
