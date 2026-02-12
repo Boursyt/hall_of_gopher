@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/storage"
 	qrcode "github.com/skip2/go-qrcode"
@@ -174,9 +175,10 @@ func handleQRCode(w http.ResponseWriter, r *http.Request) {
 	png.Encode(w, qr.Image(256))
 }
 
-// listAfterImages liste les images dans img/after/ et extrait le nom de l'uploadeur.
+// listAfterImages liste les images dans img/after/ et génère des URLs signées.
 func listAfterImages(ctx context.Context, client *storage.Client) []ImageEntry {
-	it := client.Bucket(bucketName).Objects(ctx, &storage.Query{Prefix: outputPrefix})
+	bucket := client.Bucket(bucketName)
+	it := bucket.Objects(ctx, &storage.Query{Prefix: outputPrefix})
 	var images []ImageEntry
 
 	for {
@@ -199,9 +201,18 @@ func listAfterImages(ctx context.Context, client *storage.Client) []ImageEntry {
 			uploader = parts[0]
 		}
 
+		signedURL, err := bucket.SignedURL(attrs.Name, &storage.SignedURLOptions{
+			Method:  "GET",
+			Expires: time.Now().Add(1 * time.Hour),
+		})
+		if err != nil {
+			log.Printf("SignedURL(%s): %v", attrs.Name, err)
+			continue
+		}
+
 		images = append(images, ImageEntry{
 			Filename: filename,
-			URL:      fmt.Sprintf("https://storage.googleapis.com/%s/%s%s", bucketName, outputPrefix, filename),
+			URL:      signedURL,
 			Uploader: uploader,
 		})
 	}

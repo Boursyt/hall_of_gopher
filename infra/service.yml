@@ -8,6 +8,7 @@ metadata:
 spec:
   template:
     spec:
+      serviceAccountName: image-app@favorable-tree-471508-t9.iam.gserviceaccount.com
       containers:
         - image: IMAGE_NAME
           ports:
@@ -16,6 +17,3 @@ spec:
             limits:
               cpu: "1000m"
               memory: "512Mi"
-          env:
-            - name: FLASK_ENV
-              value: "production"
