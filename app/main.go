@@ -99,7 +99,9 @@ func getCachedSignedURL(bucket *storage.BucketHandle, objectName string) (string
 // renderUploadError affiche la page upload avec un message d'erreur.
 func renderUploadError(w http.ResponseWriter, msg string) {
 	w.WriteHeader(http.StatusBadRequest)
-	templates.ExecuteTemplate(w, "upload.html", map[string]string{"Error": msg})
+	if err := templates.ExecuteTemplate(w, "upload.html", map[string]string{"Error": msg}); err != nil {
+		log.Printf("template upload error: %v", err)
+	}
 }
 
 // ─── GCS ────────────────────────────────────────────────────────────────────
@@ -164,13 +166,17 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 
 // handleHome affiche la page d'accueil avec le slider.
 func handleHome(w http.ResponseWriter, r *http.Request) {
-	templates.ExecuteTemplate(w, "home.html", nil)
+	if err := templates.ExecuteTemplate(w, "home.html", nil); err != nil {
+		log.Printf("template home: %v", err)
+	}
 }
 
 // handleUpload affiche le formulaire (GET) ou traite l'upload (POST).
 func handleUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		templates.ExecuteTemplate(w, "upload.html", nil)
+		if err := templates.ExecuteTemplate(w, "upload.html", nil); err != nil {
+			log.Printf("template upload: %v", err)
+		}
 		return
 	}
 
@@ -231,7 +237,9 @@ func handleAPIImages(w http.ResponseWriter, r *http.Request) {
 	images := listAfterImages(ctx, client)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(images)
+	if err := json.NewEncoder(w).Encode(images); err != nil {
+		log.Printf("json encode: %v", err)
+	}
 }
 
 // handleQRCode génère un QR code PNG pointant vers /home.
@@ -254,7 +262,9 @@ func handleQRCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "image/png")
-	png.Encode(w, qr.Image(256))
+	if err := png.Encode(w, qr.Image(256)); err != nil {
+		log.Printf("png encode: %v", err)
+	}
 }
 
 // ─── Point d'entrée ─────────────────────────────────────────────────────────
