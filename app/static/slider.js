@@ -2,9 +2,28 @@ let images = [];
 let currentIndex = 0;
 let autoPlay = true;
 let autoPlayInterval = null;
+const preloaded = new Map();
 
 function imageListKey(list) {
     return list.map(img => img.filename).join("|");
+}
+
+function preloadImages(list) {
+    list.forEach(img => {
+        if (!preloaded.has(img.url)) {
+            const el = new Image();
+            el.src = img.url;
+            preloaded.set(img.url, el);
+        }
+    });
+
+    // Nettoyer les anciennes URLs qui ne sont plus dans la liste
+    const currentURLs = new Set(list.map(img => img.url));
+    for (const url of preloaded.keys()) {
+        if (!currentURLs.has(url)) {
+            preloaded.delete(url);
+        }
+    }
 }
 
 async function fetchImages() {
@@ -14,9 +33,11 @@ async function fetchImages() {
         if (imageListKey(data) !== imageListKey(images)) {
             images = data;
             currentIndex = Math.min(currentIndex, Math.max(0, images.length - 1));
+            preloadImages(images);
             renderSlide();
         } else {
             images = data;
+            preloadImages(images);
         }
     } catch (e) {
         console.error("Erreur fetch images:", e);

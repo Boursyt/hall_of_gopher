@@ -7,5 +7,7 @@ services:
       - "8080:8080"
     volumes:
       - ./app:/app
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/root/.config/gcloud/application_default_credentials.json:ro
     environment:
       - PORT=8080
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
