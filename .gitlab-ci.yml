@@ -72,11 +72,12 @@ deploy-resize-function:
   script:
     - gcloud functions deploy ${CLOUD_FUNCTION_NAME}
       --gen2
-      --runtime=go122
+      --runtime=go125
       --region=${REGION}
       --source=./resize_script
       --entry-point=ResizeImage
       --trigger-event-filters="type=google.cloud.storage.object.v1.finalized"
       --trigger-event-filters="bucket=${BUCKET_NAME}"
+      --trigger-location=eu
   only:
     - main
