@@ -13,7 +13,7 @@ variables:
   CLOUD_FUNCTION_NAME: "resize-image"
   BUCKET_NAME: "script-resize"
 
-build-flask:
+build-go-webapp:
   stage: build
   image: google/cloud-sdk:alpine
   id_tokens:
@@ -35,7 +35,7 @@ build-flask:
     - main
     - merge_requests
 
-deploy-flask:
+deploy-go-webapp:
   stage: deploy
   image: google/cloud-sdk:alpine
   id_tokens:

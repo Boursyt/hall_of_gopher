@@ -19,7 +19,11 @@
             </div>
             <button class="slider-btn next" onclick="nextSlide()">&rsaquo;</button>
         </div>
-        <button id="toggle-autoplay" class="btn-autoplay" onclick="toggleAutoPlay()">Pause</button>
+        <label class="switch" for="toggle-autoplay">
+            <input type="checkbox" id="toggle-autoplay" checked onchange="toggleAutoPlay()">
+            <span class="switch-slider"></span>
+            <span class="switch-label">Rotation automatique</span>
+        </label>
     </div>
 
     <div class="bottom-bar">

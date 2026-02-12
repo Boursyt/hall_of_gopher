@@ -53,13 +53,11 @@ function prevSlide() {
 }
 
 function toggleAutoPlay() {
-    autoPlay = !autoPlay;
-    const btn = document.getElementById("toggle-autoplay");
+    const checkbox = document.getElementById("toggle-autoplay");
+    autoPlay = checkbox.checked;
     if (autoPlay) {
-        btn.textContent = "Pause";
         autoPlayInterval = setInterval(nextSlide, 3000);
     } else {
-        btn.textContent = "Lecture";
         clearInterval(autoPlayInterval);
     }
 }
