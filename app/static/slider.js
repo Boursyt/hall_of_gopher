@@ -1,5 +1,7 @@
 let images = [];
 let currentIndex = 0;
+let autoPlay = true;
+let autoPlayInterval = null;
 
 async function fetchImages() {
     try {
@@ -50,6 +52,18 @@ function prevSlide() {
     renderSlide();
 }
 
+function toggleAutoPlay() {
+    autoPlay = !autoPlay;
+    const btn = document.getElementById("toggle-autoplay");
+    if (autoPlay) {
+        btn.textContent = "Pause";
+        autoPlayInterval = setInterval(nextSlide, 3000);
+    } else {
+        btn.textContent = "Lecture";
+        clearInterval(autoPlayInterval);
+    }
+}
+
 fetchImages();
-setInterval(fetchImages, 5000);
-setInterval(nextSlide, 3000);
+setInterval(fetchImages, 2000);
+autoPlayInterval = setInterval(nextSlide, 3000);
