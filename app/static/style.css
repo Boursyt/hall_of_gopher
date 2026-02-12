@@ -302,3 +302,59 @@ form button:active {
     color: var(--text-light);
     font-size: 0.85em;
 }
+
+/* Responsive */
+@media (max-width: 640px) {
+    body {
+        padding: 16px 12px;
+    }
+
+    .header h1 {
+        font-size: 1.6em;
+    }
+
+    .card {
+        padding: 16px;
+        border-radius: 12px;
+    }
+
+    .slider {
+        min-height: 250px;
+    }
+
+    .slider-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 1.3em;
+    }
+
+    .slider-container {
+        gap: 8px;
+    }
+
+    .slide .uploader {
+        font-size: 0.95em;
+    }
+
+    .slide .counter {
+        font-size: 0.8em;
+    }
+
+    .bottom-bar {
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .btn-upload {
+        width: 100%;
+        text-align: center;
+    }
+
+    .form-container {
+        max-width: 100%;
+    }
+
+    form button {
+        padding: 12px;
+    }
+}
