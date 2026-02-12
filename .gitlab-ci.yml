@@ -51,8 +51,8 @@ deploy-go-webapp:
     - gcloud config set project $PROJECT_ID
   script:
     - sed "s|IMAGE_NAME|${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}|g" infra/service.yml > service.generated.yml
-    - gcloud run services replace service.generated.yml --region $REGION --service-account=image-app@favorable-tree-471508-t9.iam.gserviceaccount.com
-    - gcloud run services add-iam-policy-binding ${SERVICE_NAME}
+    - gcloud run services replace service.generated.yml --region $REGION
+    - gcloud run services add-iam-policy-binding project-image-prod-yml
       --region=$REGION
       --member="allUsers"
       --role="roles/run.invoker"
