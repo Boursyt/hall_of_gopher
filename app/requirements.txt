@@ -1,4 +1,0 @@
-flask
-gunicorn
-google-cloud-storage
-qrcode[pil]

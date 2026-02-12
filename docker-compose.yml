@@ -8,4 +8,4 @@ services:
     volumes:
       - ./app:/app
     environment:
-      - FLASK_ENV=development
+      - PORT=8080
