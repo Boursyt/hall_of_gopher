@@ -1,0 +1,11 @@
+- faire une application web (dans la techno de votre choix)
+- créer une image docker de dev et un docker compose pour lancer votre application
+- créer une image docker de prod dans le meme dockerfile avec le multi-stage build
+- déployer votre application sur gcloud en utilisant cloud run
+- déployer votre application en cd avec gitlab ci
+- l'application doit:
+    - afficher un qr code qui redirige vers votre application
+    - afficher un slider d'images qui sont upload a travers votre site
+    - sur chaque image on voit le nom de la personne qui l'a upload
+    - a l'upload d'une image, une fonction cloud function doit cropper l'image pour qu'elles fassent toujours la meme taille
+    - quand une nouvelle image est prete a etre affichée, elle est visible dans le slider sans actualiser
