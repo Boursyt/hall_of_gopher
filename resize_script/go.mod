@@ -1,4 +1,4 @@
-module resize_function
+module gitlab.com/Boursyt/cours_saas_project/resize_script
 
 go 1.25
 
