@@ -10,6 +10,7 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
@@ -47,25 +48,35 @@ func ResizeImage(ctx context.Context, cloudEvent event.Event) error {
 		return nil
 	}
 
+	totalStart := time.Now()
+
 	bucket, cleanup, err := newBucket(ctx, eventData.Bucket)
 	if err != nil {
 		return err
 	}
 	defer cleanup()
 
+	dlStart := time.Now()
 	originalImage, err := downloadImage(ctx, bucket, eventData.Name)
 	if err != nil {
 		return err
 	}
+	dlDuration := time.Since(dlStart)
 
+	cropStart := time.Now()
 	croppedImage := cropToTarget(originalImage)
+	cropDuration := time.Since(cropStart)
 
 	outputPath := buildOutputPath(eventData.Name)
+	upStart := time.Now()
 	if err := uploadImage(ctx, bucket, outputPath, croppedImage); err != nil {
 		return err
 	}
+	upDuration := time.Since(upStart)
 
-	log.Printf("%s -> %s (%dx%d)", eventData.Name, outputPath, targetWidth, targetHeight)
+	log.Printf("%s -> %s (%dx%d) | download: %s | crop: %s | upload: %s | total: %s",
+		eventData.Name, outputPath, targetWidth, targetHeight,
+		dlDuration, cropDuration, upDuration, time.Since(totalStart))
 	return nil
 }
 
