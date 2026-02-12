@@ -11,7 +11,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -19,30 +21,50 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+// ─── Constantes ─────────────────────────────────────────────────────────────
+
 const (
 	bucketName   = "script-resize"
 	inputPrefix  = "img/before/"
 	outputPrefix = "img/after/"
+	urlCacheTTL  = 30 * time.Minute
 )
 
-var templates *template.Template
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 // ImageEntry représente une image dans la galerie.
 type ImageEntry struct {
-	Filename string `json:"filename"`
-	URL      string `json:"url"`
-	Uploader string `json:"uploader"`
+	Filename  string    `json:"filename"`
+	URL       string    `json:"url"`
+	Uploader  string    `json:"uploader"`
+	CreatedAt time.Time `json:"-"`
 }
 
+type cachedURL struct {
+	url     string
+	expires time.Time
+}
+
+// ─── Variables globales ─────────────────────────────────────────────────────
+
+var templates *template.Template
+
+// urlCache garde les signed URLs en cache pour éviter d'en regénérer
+// à chaque requête (ce qui cause un clignotement côté navigateur).
+var urlCache = struct {
+	sync.RWMutex
+	entries map[string]cachedURL
+}{entries: make(map[string]cachedURL)}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
 // baseDir retourne le répertoire contenant templates/ et static/.
-// En prod (scratch), c'est le répertoire de l'exécutable.
 // En dev (air), c'est le working directory.
+// En prod (scratch), c'est le répertoire de l'exécutable.
 func baseDir() string {
-	// Si templates/ existe dans le cwd, on l'utilise (dev)
 	if _, err := os.Stat("templates"); err == nil {
 		return "."
 	}
-	// Sinon on utilise le répertoire de l'exécutable (prod)
 	exe, err := os.Executable()
 	if err != nil {
 		return "."
@@ -50,26 +72,86 @@ func baseDir() string {
 	return filepath.Dir(exe)
 }
 
-func main() {
-	base := baseDir()
-	templates = template.Must(template.ParseGlob(filepath.Join(base, "templates", "*.html")))
+// getCachedSignedURL retourne une signed URL depuis le cache, ou en génère une nouvelle.
+func getCachedSignedURL(bucket *storage.BucketHandle, objectName string) (string, error) {
+	urlCache.RLock()
+	if cached, ok := urlCache.entries[objectName]; ok && time.Now().Before(cached.expires) {
+		urlCache.RUnlock()
+		return cached.url, nil
+	}
+	urlCache.RUnlock()
 
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(base, "static")))))
-
-	http.HandleFunc("/", handleIndex)
-	http.HandleFunc("/home", handleHome)
-	http.HandleFunc("/upload", handleUpload)
-	http.HandleFunc("/api/images", handleAPIImages)
-	http.HandleFunc("/qrcode", handleQRCode)
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	signed, err := bucket.SignedURL(objectName, &storage.SignedURLOptions{
+		Method:  "GET",
+		Expires: time.Now().Add(1 * time.Hour),
+	})
+	if err != nil {
+		return "", err
 	}
 
-	log.Printf("server listening on :%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	urlCache.Lock()
+	urlCache.entries[objectName] = cachedURL{url: signed, expires: time.Now().Add(urlCacheTTL)}
+	urlCache.Unlock()
+
+	return signed, nil
 }
+
+// renderUploadError affiche la page upload avec un message d'erreur.
+func renderUploadError(w http.ResponseWriter, msg string) {
+	w.WriteHeader(http.StatusBadRequest)
+	templates.ExecuteTemplate(w, "upload.html", map[string]string{"Error": msg})
+}
+
+// ─── GCS ────────────────────────────────────────────────────────────────────
+
+// listAfterImages liste les images dans img/after/, triées par date d'ajout.
+func listAfterImages(ctx context.Context, client *storage.Client) []ImageEntry {
+	bucket := client.Bucket(bucketName)
+	it := bucket.Objects(ctx, &storage.Query{Prefix: outputPrefix})
+	var images []ImageEntry
+
+	for {
+		attrs, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Printf("iterator.Next: %v", err)
+			break
+		}
+
+		filename := strings.TrimPrefix(attrs.Name, outputPrefix)
+		if filename == "" {
+			continue
+		}
+
+		uploader := "Inconnu"
+		if parts := strings.SplitN(filename, "_", 2); len(parts) > 1 {
+			uploader = parts[0]
+		}
+
+		signedURL, err := getCachedSignedURL(bucket, attrs.Name)
+		if err != nil {
+			log.Printf("SignedURL(%s): %v", attrs.Name, err)
+			continue
+		}
+
+		images = append(images, ImageEntry{
+			Filename:  filename,
+			URL:       signedURL,
+			Uploader:  uploader,
+			CreatedAt: attrs.Created,
+		})
+	}
+
+	sort.Slice(images, func(i, j int) bool {
+		return images[i].CreatedAt.Before(images[j].CreatedAt)
+	})
+
+	return images
+}
+
+// ─── Handlers ───────────────────────────────────────────────────────────────
 
 // handleIndex redirige vers /home.
 func handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -175,53 +257,25 @@ func handleQRCode(w http.ResponseWriter, r *http.Request) {
 	png.Encode(w, qr.Image(256))
 }
 
-// listAfterImages liste les images dans img/after/ et génère des URLs signées.
-func listAfterImages(ctx context.Context, client *storage.Client) []ImageEntry {
-	bucket := client.Bucket(bucketName)
-	it := bucket.Objects(ctx, &storage.Query{Prefix: outputPrefix})
-	var images []ImageEntry
+// ─── Point d'entrée ─────────────────────────────────────────────────────────
 
-	for {
-		attrs, err := it.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			log.Printf("iterator.Next: %v", err)
-			break
-		}
+func main() {
+	base := baseDir()
+	templates = template.Must(template.ParseGlob(filepath.Join(base, "templates", "*.html")))
 
-		filename := strings.TrimPrefix(attrs.Name, outputPrefix)
-		if filename == "" {
-			continue
-		}
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(base, "static")))))
 
-		uploader := "Inconnu"
-		if parts := strings.SplitN(filename, "_", 2); len(parts) > 1 {
-			uploader = parts[0]
-		}
+	http.HandleFunc("/", handleIndex)
+	http.HandleFunc("/home", handleHome)
+	http.HandleFunc("/upload", handleUpload)
+	http.HandleFunc("/api/images", handleAPIImages)
+	http.HandleFunc("/qrcode", handleQRCode)
 
-		signedURL, err := bucket.SignedURL(attrs.Name, &storage.SignedURLOptions{
-			Method:  "GET",
-			Expires: time.Now().Add(1 * time.Hour),
-		})
-		if err != nil {
-			log.Printf("SignedURL(%s): %v", attrs.Name, err)
-			continue
-		}
-
-		images = append(images, ImageEntry{
-			Filename: filename,
-			URL:      signedURL,
-			Uploader: uploader,
-		})
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
 	}
 
-	return images
-}
-
-// renderUploadError affiche la page upload avec un message d'erreur.
-func renderUploadError(w http.ResponseWriter, msg string) {
-	w.WriteHeader(http.StatusBadRequest)
-	templates.ExecuteTemplate(w, "upload.html", map[string]string{"Error": msg})
+	log.Printf("server listening on :%s", port)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }

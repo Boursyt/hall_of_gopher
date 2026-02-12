@@ -3,14 +3,20 @@ let currentIndex = 0;
 let autoPlay = true;
 let autoPlayInterval = null;
 
+function imageListKey(list) {
+    return list.map(img => img.filename).join("|");
+}
+
 async function fetchImages() {
     try {
         const res = await fetch("/api/images");
         const data = await res.json();
-        if (JSON.stringify(data) !== JSON.stringify(images)) {
+        if (imageListKey(data) !== imageListKey(images)) {
             images = data;
             currentIndex = Math.min(currentIndex, Math.max(0, images.length - 1));
             renderSlide();
+        } else {
+            images = data;
         }
     } catch (e) {
         console.error("Erreur fetch images:", e);
