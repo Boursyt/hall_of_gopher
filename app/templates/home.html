@@ -3,84 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Slider</title>
+    <title>Galerie Photos</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>Image Slider</h1>
-
-    <nav>
-        <a href="{{ url_for('upload') }}">Upload une image</a>
-    </nav>
-
-    <div class="qr-section">
-        <h2>Scannez pour acceder au site</h2>
-        <img src="{{ url_for('qr') }}" alt="QR Code" width="200" height="200">
+    <div class="header">
+        <h1>Galerie Photos</h1>
     </div>
 
-    <div class="slider-container">
-        <button class="slider-btn prev" onclick="prevSlide()">&laquo;</button>
-        <div class="slider">
-            <p id="no-images">Aucune image pour le moment.</p>
+    <div class="card">
+        <div class="slider-container">
+            <button class="slider-btn prev" onclick="prevSlide()">&lsaquo;</button>
+            <div class="slider">
+                <p id="no-images">Aucune image pour le moment.</p>
+            </div>
+            <button class="slider-btn next" onclick="nextSlide()">&rsaquo;</button>
         </div>
-        <button class="slider-btn next" onclick="nextSlide()">&raquo;</button>
     </div>
 
-    <script>
-        let images = [];
-        let currentIndex = 0;
+    <div class="bottom-bar">
+        <div class="qr-small">
+            <img src="{{ url_for('qr') }}" alt="QR Code" width="100" height="100">
+        </div>
+        <a class="btn-upload" href="{{ url_for('upload') }}">Ajouter une photo</a>
+    </div>
 
-        async function fetchImages() {
-            try {
-                const res = await fetch("/api/images");
-                const data = await res.json();
-                if (JSON.stringify(data) !== JSON.stringify(images)) {
-                    images = data;
-                    currentIndex = Math.min(currentIndex, Math.max(0, images.length - 1));
-                    renderSlide();
-                }
-            } catch (e) {
-                console.error("Erreur fetch images:", e);
-            }
-        }
-
-        function renderSlide() {
-            const slider = document.querySelector(".slider");
-            const noImg = document.getElementById("no-images");
-
-            slider.querySelectorAll(".slide").forEach(el => el.remove());
-
-            if (images.length === 0) {
-                noImg.style.display = "block";
-                return;
-            }
-            noImg.style.display = "none";
-
-            const img = images[currentIndex];
-            const slide = document.createElement("div");
-            slide.className = "slide";
-            slide.innerHTML = `
-                <img src="${img.url}" alt="${img.filename}">
-                <p class="uploader">Par : ${img.uploader}</p>
-                <p class="counter">${currentIndex + 1} / ${images.length}</p>
-            `;
-            slider.appendChild(slide);
-        }
-
-        function nextSlide() {
-            if (images.length === 0) return;
-            currentIndex = (currentIndex + 1) % images.length;
-            renderSlide();
-        }
-
-        function prevSlide() {
-            if (images.length === 0) return;
-            currentIndex = (currentIndex - 1 + images.length) % images.length;
-            renderSlide();
-        }
-
-        fetchImages();
-        setInterval(fetchImages, 5000);
-    </script>
+    <script src="{{ url_for('static', filename='slider.js') }}"></script>
 </body>
 </html>

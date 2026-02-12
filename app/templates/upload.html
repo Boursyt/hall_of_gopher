@@ -3,28 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Image</title>
+    <title>Upload Photo</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>Upload une image</h1>
+    <div class="header">
+        <h1>Ajouter une photo</h1>
+        <p>Partagez votre image avec la galerie</p>
+    </div>
 
     <nav>
-        <a href="{{ url_for('home') }}">Retour au slider</a>
+        <a href="{{ url_for('home') }}">Retour a la galerie</a>
     </nav>
 
     {% if error %}
     <p class="error">{{ error }}</p>
     {% endif %}
 
-    <form method="POST" enctype="multipart/form-data">
-        <label for="name">Votre nom (obligatoire) :</label>
-        <input type="text" id="name" name="name" required>
+    <div class="card form-container">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="name">Votre nom</label>
+                <input type="text" id="name" name="name" placeholder="Ex: Jean" required>
+            </div>
 
-        <label for="image">Choisir une image :</label>
-        <input type="file" id="image" name="image" accept="image/*" required>
+            <div class="form-group">
+                <label for="image">Choisir une image</label>
+                <input type="file" id="image" name="image" accept="image/*" required>
+            </div>
 
-        <button type="submit">Envoyer</button>
-    </form>
+            <button type="submit">Envoyer</button>
+        </form>
+    </div>
 </body>
 </html>
