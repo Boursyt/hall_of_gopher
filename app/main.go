@@ -52,8 +52,8 @@ var templates *template.Template
 // urlCache garde les signed URLs en cache pour éviter d'en regénérer
 // à chaque requête (ce qui cause un clignotement côté navigateur).
 var urlCache = struct {
-	sync.RWMutex
-	entries map[string]cachedURL
+	sync.RWMutex //RWMutex gère les acces concurents
+	entries      map[string]cachedURL
 }{entries: make(map[string]cachedURL)}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

@@ -18,7 +18,6 @@ CMD ["air", "-c", ".air.toml"]
 
 # ---- Prod ----
 FROM scratch AS prod
-COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build /server /server
 COPY app/templates/ /templates/
 COPY app/static/ /static/
