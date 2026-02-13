@@ -1,28 +1,59 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Galerie Photos</title>
+    <title>Hall of Gopher</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="header">
-        <h1>Galerie Photos</h1>
+        <div class="header-gopher">
+            <svg class="gopher-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <!-- Gopher body -->
+                <ellipse cx="50" cy="58" rx="28" ry="32" fill="#00ADD8"/>
+                <!-- Belly -->
+                <ellipse cx="50" cy="64" rx="18" ry="20" fill="#5DC9E2"/>
+                <!-- Head -->
+                <circle cx="50" cy="30" r="22" fill="#00ADD8"/>
+                <!-- Eyes (white) -->
+                <circle cx="42" cy="25" r="8" fill="#fff"/>
+                <circle cx="58" cy="25" r="8" fill="#fff"/>
+                <!-- Pupils -->
+                <circle cx="44" cy="25" r="4" fill="#1a2a33"/>
+                <circle cx="60" cy="25" r="4" fill="#1a2a33"/>
+                <!-- Nose -->
+                <ellipse cx="50" cy="33" rx="4" ry="3" fill="#00758D"/>
+                <!-- Smile -->
+                <path d="M 43 37 Q 50 43 57 37" stroke="#00758D" stroke-width="2" fill="none" stroke-linecap="round"/>
+                <!-- Teeth -->
+                <rect x="47" y="37" width="6" height="5" rx="1" fill="#fff"/>
+                <!-- Ears -->
+                <circle cx="32" cy="14" r="6" fill="#00ADD8"/>
+                <circle cx="32" cy="14" r="3" fill="#5DC9E2"/>
+                <circle cx="68" cy="14" r="6" fill="#00ADD8"/>
+                <circle cx="68" cy="14" r="3" fill="#5DC9E2"/>
+                <!-- Feet -->
+                <ellipse cx="40" cy="90" rx="8" ry="4" fill="#FFD43B"/>
+                <ellipse cx="60" cy="90" rx="8" ry="4" fill="#FFD43B"/>
+            </svg>
+            <h1>Hall of <span class="accent">Gopher</span></h1>
+        </div>
+        <p class="subtitle">go run gallery.go</p>
     </div>
 
     <div class="card">
         <div class="slider-container">
             <button class="slider-btn prev" onclick="prevSlide()">&lsaquo;</button>
             <div class="slider">
-                <p id="no-images">Aucune image pour le moment.</p>
+                <p id="no-images">No images yet. Be the first Gopher!</p>
             </div>
             <button class="slider-btn next" onclick="nextSlide()">&rsaquo;</button>
         </div>
         <label class="switch" for="toggle-autoplay">
             <input type="checkbox" id="toggle-autoplay" checked onchange="toggleAutoPlay()">
             <span class="switch-slider"></span>
-            <span class="switch-label">Rotation automatique</span>
+            <span class="switch-label">Auto-play</span>
         </label>
     </div>
 
@@ -30,8 +61,10 @@
         <div class="qr-small">
             <img src="/qrcode" alt="QR Code" width="140" height="140">
         </div>
-        <a class="btn-upload" href="/upload">Ajouter une photo</a>
+        <a class="btn-upload" href="/upload">Upload your Gopher moment</a>
     </div>
+
+    <div class="footer-badge">Powered by <span>Gophers</span></div>
 
     <script src="/static/slider.js"></script>
 </body>

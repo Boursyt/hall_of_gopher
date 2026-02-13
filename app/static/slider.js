@@ -61,7 +61,7 @@ function renderSlide() {
     slide.className = "slide";
     slide.innerHTML = `
         <img src="${img.url}" alt="${img.filename}">
-        <p class="uploader">Par : ${img.uploader}</p>
+        <p class="uploader">By: ${img.uploader}</p>
         <p class="counter">${currentIndex + 1} / ${images.length}</p>
     `;
     slider.appendChild(slide);
