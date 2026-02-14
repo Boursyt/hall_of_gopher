@@ -1,5 +1,6 @@
 services:
   web:
+    image: cours_saas_project-web-dev
     build:
       context: .
       target: dev

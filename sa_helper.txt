@@ -1,0 +1,222 @@
+################################################################################
+#                        SERVICE ACCOUNTS & IAM                                #
+#                                                                              #
+#  Principe : least privilege (droits minimaux)                                #
+#  On a 2 service accounts :                                                   #
+#    - image-app  : utilisé au RUNTIME par la webapp Cloud Run                 #
+#                   et la Cloud Function de resize                             #
+#    - gitlab-ci  : utilisé par la CI/CD GitLab pour build & déployer          #
+################################################################################
+
+
+###############################################################################
+# 1. CRÉER LE SERVICE ACCOUNT image-app
+###############################################################################
+# Ce SA est attaché à la webapp (Cloud Run) et à la Cloud Function.
+# Il n'a AUCUN droit par défaut, on lui ajoute uniquement ce dont l'app a besoin.
+
+gcloud iam service-accounts create image-app \
+  --display-name="Image App Runtime" \
+  --project=favorable-tree-471508-t9
+
+
+###############################################################################
+# 2. DROITS DE image-app SUR LE BUCKET script-resize
+###############################################################################
+# Le bucket contient 2 dossiers :
+#   img/before/  → images brutes uploadées par la webapp
+#   img/after/   → images croppées par la Cloud Function
+#
+# La webapp a besoin de :
+#   - LIRE img/after/ pour lister les images dans le slider   → objectViewer
+#   - ÉCRIRE dans img/before/ pour uploader les photos        → objectCreator
+#
+# La Cloud Function a besoin de :
+#   - LIRE img/before/ pour récupérer l'image à cropper       → objectViewer
+#   - ÉCRIRE dans img/after/ pour sauver l'image croppée      → objectCreator
+
+# objectViewer : permissions storage.objects.get + storage.objects.list
+# Permet de lister les fichiers et de les télécharger.
+gcloud storage buckets add-iam-policy-binding gs://script-resize \
+  --member="serviceAccount:image-app@favorable-tree-471508-t9.iam.gserviceaccount.com" \
+  --role="roles/storage.objectViewer"
+
+# objectCreator : permission storage.objects.create
+# Permet de créer (uploader) de nouveaux objets dans le bucket.
+gcloud storage buckets add-iam-policy-binding gs://script-resize \
+  --member="serviceAccount:image-app@favorable-tree-471508-t9.iam.gserviceaccount.com" \
+  --role="roles/storage.objectCreator"
+
+
+###############################################################################
+# 3. DROIT DE SIGNER DES URLS (bucket privé → signed URLs)
+###############################################################################
+# Le bucket est PRIVÉ (pas d'accès public). Pour afficher les images dans le
+# navigateur, la webapp génère des "signed URLs" : des URLs temporaires (1h)
+# qui contiennent une signature cryptographique prouvant que le SA autorise
+# l'accès.
+#
+# Pour signer, le SA doit pouvoir appeler l'API IAM "signBlob" sur lui-même.
+# C'est exactement ce que donne serviceAccountTokenCreator.
+#
+# Note : le rôle est donné SUR le SA lui-même (pas sur le projet), car il
+# n'a besoin de signer que ses propres tokens.
+
+# serviceAccountTokenCreator : permissions iam.serviceAccounts.signBlob +
+#   iam.serviceAccounts.signJwt + iam.serviceAccounts.getAccessToken
+# Utilisé par le SDK Go (bucket.SignedURL) pour générer des V4 signed URLs.
+gcloud iam service-accounts add-iam-policy-binding \
+  image-app@favorable-tree-471508-t9.iam.gserviceaccount.com \
+  --member="serviceAccount:image-app@favorable-tree-471508-t9.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountTokenCreator"
+
+
+###############################################################################
+# 4. LOGS ET MÉTRIQUES POUR image-app
+###############################################################################
+# Sans ces rôles, les logs de la webapp et de la Cloud Function n'apparaissent
+# pas dans Cloud Logging / Cloud Monitoring. On les donne au niveau PROJET
+# car les logs sont écrits dans le projet, pas dans un bucket spécifique.
+
+# logWriter : permission logging.logEntries.create
+# Permet d'écrire des logs dans Cloud Logging (visibles dans la console GCP).
+gcloud projects add-iam-policy-binding favorable-tree-471508-t9 \
+  --member="serviceAccount:image-app@favorable-tree-471508-t9.iam.gserviceaccount.com" \
+  --role="roles/logging.logWriter"
+
+# metricWriter : permission monitoring.timeSeries.create
+# Permet d'envoyer des métriques (CPU, mémoire, latence) à Cloud Monitoring.
+gcloud projects add-iam-policy-binding favorable-tree-471508-t9 \
+  --member="serviceAccount:image-app@favorable-tree-471508-t9.iam.gserviceaccount.com" \
+  --role="roles/monitoring.metricWriter"
+
+
+###############################################################################
+# 5. RETIRER LE RÔLE OWNER DE gitlab-ci
+###############################################################################
+# Le rôle "owner" donne TOUS les droits sur le projet (créer/supprimer des
+# ressources, modifier l'IAM, accéder à toutes les données...).
+# C'est beaucoup trop pour un SA de CI/CD. On le retire et on donne uniquement
+# les rôles nécessaires au build et au déploiement.
+
+gcloud projects remove-iam-policy-binding favorable-tree-471508-t9 \
+  --member="serviceAccount:gitlab-ci@favorable-tree-471508-t9.iam.gserviceaccount.com" \
+  --role="roles/owner"
+
+
+###############################################################################
+# 6. DROITS MINIMAUX DE gitlab-ci POUR LA CI/CD
+###############################################################################
+# Chaque rôle correspond à une action précise de la pipeline GitLab CI.
+
+# --- BUILD ---
+
+# cloudbuild.builds.editor : permissions cloudbuild.builds.create + .get + .list
+# Permet de soumettre un build Docker via "gcloud builds submit" et de
+# suivre son avancement. C'est Cloud Build qui construit l'image Docker
+# et la pousse dans Artifact Registry.
+gcloud projects add-iam-policy-binding favorable-tree-471508-t9 \
+  --member="serviceAccount:gitlab-ci@favorable-tree-471508-t9.iam.gserviceaccount.com" \
+  --role="roles/cloudbuild.builds.editor"
+
+# serviceusage.serviceUsageConsumer : permission serviceusage.services.use
+# Nécessaire pour appeler N'IMPORTE quelle API GCP (Cloud Build, Storage,
+# Cloud Run...). Le rôle "owner" incluait cette permission implicitement.
+# Sans ce rôle, toutes les commandes gcloud échouent avec "forbidden".
+gcloud projects add-iam-policy-binding favorable-tree-471508-t9 \
+  --member="serviceAccount:gitlab-ci@favorable-tree-471508-t9.iam.gserviceaccount.com" \
+  --role="roles/serviceusage.serviceUsageConsumer"
+
+# viewer : rôle basique "lecteur" au niveau projet.
+# "gcloud builds submit" stream les logs du build en temps réel. Ces logs
+# sont écrits dans un bucket GCS par défaut géré par Google
+# (gs://<project-number>.cloudbuild-logs.googleusercontent.com).
+# Ce bucket n'est accessible qu'aux Viewer/Owner du projet.
+# Sans ce rôle, le build tourne mais la commande échoue car elle ne peut
+# pas lire les logs.
+# Note : viewer est en lecture seule, il ne permet aucune modification.
+gcloud projects add-iam-policy-binding favorable-tree-471508-t9 \
+  --member="serviceAccount:gitlab-ci@favorable-tree-471508-t9.iam.gserviceaccount.com" \
+  --role="roles/viewer"
+
+# --- BUCKET STAGING CLOUD BUILD ---
+# "gcloud builds submit" compresse le code source en .tar.gz et l'upload
+# dans un bucket GCS de staging avant de lancer le build. Il faut donc
+# des droits sur ce bucket spécifique.
+
+# objectAdmin : permissions storage.objects.* (create, get, list, delete, update)
+# Permet de créer et gérer les archives source dans le bucket de staging.
+gcloud storage buckets add-iam-policy-binding gs://favorable-tree-471508-t9_cloudbuild \
+  --member="serviceAccount:gitlab-ci@favorable-tree-471508-t9.iam.gserviceaccount.com" \
+  --role="roles/storage.objectAdmin"
+
+# legacyBucketWriter : permissions storage.buckets.get + storage.objects.create/list/delete
+# objectAdmin seul ne suffit PAS : il donne les droits sur les OBJETS mais
+# pas sur le BUCKET lui-même. "gcloud builds submit" a besoin d'accéder aux
+# métadonnées du bucket (vérifier qu'il existe, son emplacement...).
+# legacyBucketWriter donne cet accès bucket-level.
+gcloud storage buckets add-iam-policy-binding gs://favorable-tree-471508-t9_cloudbuild \
+  --member="serviceAccount:gitlab-ci@favorable-tree-471508-t9.iam.gserviceaccount.com" \
+  --role="roles/storage.legacyBucketWriter"
+
+# --- DEPLOY CLOUD RUN ---
+
+# run.admin : permissions run.services.* + run.routes.* + run.revisions.*
+# Permet de déployer un service Cloud Run ("gcloud run services replace")
+# et de modifier sa policy IAM ("gcloud run services add-iam-policy-binding"
+# pour rendre le service public avec allUsers).
+gcloud projects add-iam-policy-binding favorable-tree-471508-t9 \
+  --member="serviceAccount:gitlab-ci@favorable-tree-471508-t9.iam.gserviceaccount.com" \
+  --role="roles/run.admin"
+
+# --- DEPLOY CLOUD FUNCTION ---
+
+# cloudfunctions.developer : permissions cloudfunctions.functions.create/update/get/list
+# Permet de déployer la Cloud Function de resize ("gcloud functions deploy").
+gcloud projects add-iam-policy-binding favorable-tree-471508-t9 \
+  --member="serviceAccount:gitlab-ci@favorable-tree-471508-t9.iam.gserviceaccount.com" \
+  --role="roles/cloudfunctions.developer"
+
+# eventarc.developer : permissions eventarc.triggers.create/update/get/list
+# La Cloud Function est déclenchée par un événement GCS (upload dans le bucket).
+# Ce trigger passe par Eventarc. Ce rôle permet de créer/modifier ce trigger
+# lors du déploiement.
+gcloud projects add-iam-policy-binding favorable-tree-471508-t9 \
+  --member="serviceAccount:gitlab-ci@favorable-tree-471508-t9.iam.gserviceaccount.com" \
+  --role="roles/eventarc.developer"
+
+# --- PERMISSIONS TRANSVERSALES ---
+
+# iam.serviceAccountUser : permission iam.serviceAccounts.actAs
+# Quand la CI déploie Cloud Run ou Cloud Function avec
+# "--run-service-account=image-app@...", elle "assigne" le SA image-app
+# au service. Pour ça, gitlab-ci doit avoir le droit d'"agir en tant que"
+# (actAs) ce SA. Sans ce rôle, le déploiement échoue avec "Permission denied
+# to act as service account".
+gcloud projects add-iam-policy-binding favorable-tree-471508-t9 \
+  --member="serviceAccount:gitlab-ci@favorable-tree-471508-t9.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountUser"
+
+# iam.workloadIdentityUser : (déjà configuré sur le pool)
+# Permet à GitLab CI de s'authentifier via OIDC (Workload Identity Federation)
+# sans clé JSON. GitLab envoie un JWT, GCP le vérifie via le pool d'identité,
+# et autorise gitlab-ci à agir.
+# → Configuré lors du setup initial du Workload Identity Pool.
+
+
+###############################################################################
+# 7. RETIRER L'ACCÈS PUBLIC DU BUCKET script-resize
+###############################################################################
+# Avant, le bucket était public (allUsers pouvait lire les images).
+# Maintenant, la webapp génère des signed URLs → plus besoin d'accès public.
+# On retire l'accès et on réactive la prévention d'accès public (sécurité).
+
+# Retirer la permission de lecture publique
+gcloud storage buckets remove-iam-policy-binding gs://script-resize \
+  --member="allUsers" \
+  --role="roles/storage.legacyObjectReader"
+
+# Réactiver la prévention d'accès public (bloque toute future tentative
+# d'ajouter allUsers ou allAuthenticatedUsers sur ce bucket)
+gcloud storage buckets update gs://script-resize \
+  --public-access-prevention

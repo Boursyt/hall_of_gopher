@@ -1,0 +1,14 @@
+services:
+  web:
+    image: cours_saas_project-web-prod
+    build:
+      context: .
+      target: prod
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - GOOGLE_APPLICATION_CREDENTIALS=/etc/secrets/gcp-key.json
+    volumes:
+      - ~/.config/gcloud/application_default_credentials.json:/etc/secrets/gcp-key.json:ro
+    restart: always
