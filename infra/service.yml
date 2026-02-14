@@ -2,13 +2,13 @@ apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
   name: project-image-prod-yml
-  namespace: favorable-tree-471508-t9
+  namespace: YOUR_PROJECT_ID
   labels:
     cloudcontainers-googleapis-com-container-name: project-image-prod
 spec:
   template:
     spec:
-      serviceAccountName: image-app@favorable-tree-471508-t9.iam.gserviceaccount.com
+      serviceAccountName: YOUR_SERVICE_ACCOUNT
       containers:
         - image: IMAGE_NAME
           ports:

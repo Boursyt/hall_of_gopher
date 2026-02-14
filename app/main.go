@@ -24,7 +24,7 @@ import (
 // ─── Constantes ─────────────────────────────────────────────────────────────
 
 const (
-	bucketName   = "script-resize"
+	bucketName   = "YOUR_GCS_BUCKET"
 	inputPrefix  = "img/before/"
 	outputPrefix = "img/after/"
 	urlCacheTTL  = 30 * time.Minute

@@ -3,13 +3,13 @@ steps:
     args:
       - "build"
       - "-t"
-      - "europe-docker.pkg.dev/favorable-tree-471508-t9/cours-saas/project-image:$_TAG"
+      - "europe-docker.pkg.dev/YOUR_PROJECT_ID/cours-saas/project-image:$_TAG"
       - "."
       - "--target"
       - "prod"
 
 images:
-  - "europe-docker.pkg.dev/favorable-tree-471508-t9/cours-saas/project-image:$_TAG"
+  - "europe-docker.pkg.dev/YOUR_PROJECT_ID/cours-saas/project-image:$_TAG"
 
 substitutions:
   _TAG: "latest"

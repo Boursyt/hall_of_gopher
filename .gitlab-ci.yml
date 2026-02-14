@@ -3,15 +3,15 @@ stages:
   - deploy
 
 variables:
-  PROJECT_ID: "favorable-tree-471508-t9"
+  PROJECT_ID: "YOUR_PROJECT_ID"
   REGION: "europe-west1"
   SERVICE_NAME: "project_saas"
-  IMAGE_NAME: "europe-docker.pkg.dev/favorable-tree-471508-t9/cours-saas/project-image"
-  WORKLOAD_IDENTITY_PROVIDER: "projects/1755853372/locations/global/workloadIdentityPools/github-provider/providers/gitlab-gitlab"
-  SERVICE_ACCOUNT_EMAIL: "gitlab-ci@favorable-tree-471508-t9.iam.gserviceaccount.com"
-  RUN_SERVICE_ACCOUNT: "image-app@favorable-tree-471508-t9.iam.gserviceaccount.com"
+  IMAGE_NAME: "europe-docker.pkg.dev/YOUR_PROJECT_ID/cours-saas/project-image"
+  WORKLOAD_IDENTITY_PROVIDER: "projects/YOUR_PROJECT_ID/locations/global/workloadIdentityPools/github-provider/providers/gitlab-gitlab"
+  SERVICE_ACCOUNT_EMAIL: "YOUR_SERVICE_ACCOUNT"
+  RUN_SERVICE_ACCOUNT: "YOUR_SERVICE_ACCOUNT"
   CLOUD_FUNCTION_NAME: "resize-image"
-  BUCKET_NAME: "script-resize"
+  BUCKET_NAME: "YOUR_GCS_BUCKET"
 
 # ─── Template d'auth GCP (OIDC) ─────────────────────────────────────────────
 .gcp_auth:

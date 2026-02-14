@@ -25,7 +25,7 @@ Tech stack
   - `/upload`: upload form
   - `/api/images`: JSON list of images
   - `/qrcode`: QR code to `/home`
-- Uploads to bucket `script-resize` under `img/before/`.
+- Uploads to bucket `YOUR_GCS_BUCKET` under `img/before/`.
 - Lists images from `img/after/` with signed URLs cached for 30 minutes.
 - Templates and assets in `app/templates/` and `app/static/`.
 
@@ -53,4 +53,4 @@ docker compose -f docker-compose-prod.yml up --build
 - `docker-compose.yml`: image `cours_saas_project-web-dev`
 - `docker-compose-prod.yml`: image `cours_saas_project-web-prod`
 - `infra/build.yml`: Cloud Build to Artifact Registry
-- `infra/service.yml`: Cloud Run service with `serviceAccountName: image-app@favorable-tree-471508-t9.iam.gserviceaccount.com`
+- `infra/service.yml`: Cloud Run service with `serviceAccountName: YOUR_SERVICE_ACCOUNT`
